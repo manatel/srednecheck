@@ -1,0 +1,820 @@
+t()
+		{	// disown owning container
+		_Myproxy = 0;
+		}
+
+	const _Container_base12 *_Getcont() const
+		{	// get owning container
+		return (_Myproxy == 0 ? 0 : _Myproxy->_Mycont);
+		}
+
+	_Iterator_base12 **_Getpnext()
+		{	// get address of remaining iterator chain
+		return (&_Mynextiter);
+		}
+
+	void _Orphan_me()
+		{	// cut ties with parent
+ #if _ITERATOR_DEBUG_LEVEL == 2
+		if (_Myproxy != 0)
+			{	// adopted, remove self from list
+			_Iterator_base12 **_Pnext = &_Myproxy->_Myfirstiter;
+			while (*_Pnext != 0 && *_Pnext != this)
+				_Pnext = &(*_Pnext)->_Mynextiter;
+
+			if (*_Pnext == 0)
+				_DEBUG_ERROR("ITERATOR LIST CORRUPTED!");
+			*_Pnext = _Mynextiter;
+			_Myproxy = 0;
+			}
+ #endif /* _ITERATOR_DEBUG_LEVEL == 2 */
+		}
+
+	_Container_proxy *_Myproxy;
+	_Iterator_base12 *_Mynextiter;
+	};
+
+		// MEMBER FUNCTIONS FOR _Container_base12
+inline void _Container_base12::_Orphan_all()
+	{	// orphan all iterators
+ #if _ITERATOR_DEBUG_LEVEL == 2
+	if (_Myproxy != 0)
+		{	// proxy allocated, drain it
+		_Lockit _Lock(_LOCK_DEBUG);
+
+		for (_Iterator_base12 **_Pnext = &_Myproxy->_Myfirstiter;
+			*_Pnext != 0; *_Pnext = (*_Pnext)->_Mynextiter)
+			(*_Pnext)->_Myproxy = 0;
+		_Myproxy->_Myfirstiter = 0;
+		}
+ #endif /* _ITERATOR_DEBUG_LEVEL == 2 */
+	}
+
+inline void _Container_base12::_Swap_all(_Container_base12& _Right)
+	{	// swap all iterators
+ #if _ITERATOR_DEBUG_LEVEL == 2
+	_Lockit _Lock(_LOCK_DEBUG);
+ #endif /* _ITERATOR_DEBUG_LEVEL == 2 */
+
+	_Container_proxy *_Temp = _Myproxy;
+	_Myproxy = _Right._Myproxy;
+	_Right._Myproxy = _Temp;
+
+	if (_Myproxy != 0)
+		_Myproxy->_Mycont = (_Container_base12 *)this;
+	if (_Right._Myproxy != 0)
+		_Right._Myproxy->_Mycont = (_Container_base12 *)&_Right;
+	}
+
+ #if _ITERATOR_DEBUG_LEVEL == 0
+typedef _Container_base0 _Container_base;
+typedef _Iterator_base0 _Iterator_base;
+
+ #else /* _ITERATOR_DEBUG_LEVEL == 0 */
+typedef _Container_base12 _Container_base;
+typedef _Iterator_base12 _Iterator_base;
+ #endif /* _ITERATOR_DEBUG_LEVEL == 0 */
+
+	// TEMPLATE CLASS _Compressed_pair
+struct _Zero_then_variadic_args_t
+	{	// tag type for value-initializing first,
+	};	// constructing second from remaining args
+
+struct _One_then_variadic_args_t
+	{	// tag type for constructing first from one arg,
+	};	// constructing second from remaining args
+
+template<class _Ty1,
+	class _Ty2,
+	bool = is_empty<_Ty1>::value && !is_final<_Ty1>::value>
+	class _Compressed_pair final
+		: private _Ty1
+
+	{	// store a pair of values, deriving from empty first
+private:
+	_Ty2 _Myval2;
+
+	typedef _Ty1 _Mybase;	// for visualization
+
+public:
+	template<class... _Other2>
+		_CONST_FUN explicit _Compressed_pair(_Zero_then_variadic_args_t,
+			_Other2&&... _Val2)
+		: _Ty1(), _Myval2(_STD forward<_Other2>(_Val2)...)
+		{	// construct from forwarded values
+		}
+
+	template<class _Other1,
+		class... _Other2>
+		_Compressed_pair(_One_then_variadic_args_t,
+			_Other1&& _Val1, _Other2&&... _Val2)
+		: _Ty1(_STD forward<_Other1>(_Val1)),
+			_Myval2(_STD forward<_Other2>(_Val2)...)
+		{	// construct from forwarded values
+		}
+
+
+	_Ty1& _Get_first() _NOEXCEPT
+		{	// return reference to first
+		return (*this);
+		}
+
+	const _Ty1& _Get_first() const _NOEXCEPT
+		{	// return const reference to first
+		return (*this);
+		}
+
+	volatile _Ty1& _Get_first() volatile _NOEXCEPT
+		{	// return volatile reference to first
+		return (*this);
+		}
+
+	const volatile _Ty1& _Get_first() const volatile _NOEXCEPT
+		{	// return const volatile reference to first
+		return (*this);
+		}
+
+	_Ty2& _Get_second() _NOEXCEPT
+		{	// return reference to second
+		return (_Myval2);
+		}
+
+	const _Ty2& _Get_second() const _NOEXCEPT
+		{	// return const reference to second
+		return (_Myval2);
+		}
+
+	volatile _Ty2& _Get_second() volatile _NOEXCEPT
+		{	// return volatile reference to second
+		return (_Myval2);
+		}
+
+	const volatile _Ty2& _Get_second() const volatile _NOEXCEPT
+		{	// return const volatile reference to second
+		return (_Myval2);
+		}
+	};
+
+template<class _Ty1,
+	class _Ty2>
+	class _Compressed_pair<_Ty1, _Ty2, false> final
+
+	{	// store a pair of values, not deriving from first
+private:
+	_Ty1 _Myval1;
+	_Ty2 _Myval2;
+
+public:
+	template<class... _Other2>
+		_CONST_FUN explicit _Compressed_pair(_Zero_then_variadic_args_t,
+			_Other2&&... _Val2)
+		: _Myval1(), _Myval2(_STD forward<_Other2>(_Val2)...)
+		{	// construct from forwarded values
+		}
+
+	template<class _Other1,
+		class... _Other2>
+		_Compressed_pair(_One_then_variadic_args_t,
+			_Other1&& _Val1, _Other2&&... _Val2)
+		: _Myval1(_STD forward<_Other1>(_Val1)),
+			_Myval2(_STD forward<_Other2>(_Val2)...)
+		{	// construct from forwarded values
+		}
+
+
+	_Ty1& _Get_first() _NOEXCEPT
+		{	// return reference to first
+		return (_Myval1);
+		}
+
+	const _Ty1& _Get_first() const _NOEXCEPT
+		{	// return const reference to first
+		return (_Myval1);
+		}
+
+	volatile _Ty1& _Get_first() volatile _NOEXCEPT
+		{	// return volatile reference to first
+		return (_Myval1);
+		}
+
+	const volatile _Ty1& _Get_first() const volatile _NOEXCEPT
+		{	// return const volatile reference to first
+		return (_Myval1);
+		}
+
+	_Ty2& _Get_second() _NOEXCEPT
+		{	// return reference to second
+		return (_Myval2);
+		}
+
+	const _Ty2& _Get_second() const _NOEXCEPT
+		{	// return const reference to second
+		return (_Myval2);
+		}
+
+	volatile _Ty2& _Get_second() volatile _NOEXCEPT
+		{	// return volatile reference to second
+		return (_Myval2);
+		}
+
+	const volatile _Ty2& _Get_second() const volatile _NOEXCEPT
+		{	// return const volatile reference to second
+		return (_Myval2);
+		}
+	};
+
+		// TEMPLATE FUNCTION _Is_checked AND FRIENDS
+
+		// TEMPLATE STRUCT _Get_unchecked_type AND FRIENDS
+ #define _UNCHECKED_TYPE(_Iter) \
+	typename _Get_unchecked_type<_Iter>::type
+
+		// TEMPLATE STRUCT _Get_unchecked_type
+template<class _Ty>
+	struct _Get_unchecked_type
+		_GET_TYPE_OR_DEFAULT(_Unchecked_type,
+			_Ty);
+
+		// TEMPLATE STRUCT _Is_checked_helper
+template<class _Ty,
+	class = void>
+	struct _Is_checked_helper
+		: false_type
+	{	// default definition
+	};
+
+template<class _Ty>
+	struct _Is_checked_helper<_Ty, typename _Param_tester<
+		typename _Ty::_Unchecked_type>::type>
+		: true_type
+	{	// defined if _Ty::_Unchecked_type exists
+	};
+
+		// TEMPLATE FUNCTION _Is_checked
+template<class _Iter> inline
+	typename _Is_checked_helper<_Iter>::type _Is_checked(_Iter)
+	{	// return type is derived from true_type if iterator is checked
+	return (typename _Is_checked_helper<_Iter>::type());
+	}
+
+		// TEMPLATE FUNCTION _Unchecked
+template<class _Iter> inline
+	_Iter _Unchecked(_Iter _Src)
+	{	// construct unchecked from checked, generic
+	return (_Src);
+	}
+
+		// TEMPLATE FUNCTION _Rechecked
+template<class _Iter,
+	class _UIter> inline
+	_Iter& _Rechecked(_Iter& _Dest, _UIter _Src)
+	{	// reset checked from unchecked, generic
+	_Dest = _Src;
+	return (_Dest);
+	}
+
+		//	ITERATOR STUFF (from <iterator>)
+		// ITERATOR TAGS (from <iterator>)
+struct input_iterator_tag
+	{	// identifying tag for input iterators
+	};
+
+struct _Mutable_iterator_tag
+	{	// identifying tag for mutable iterators
+	};
+
+struct output_iterator_tag
+	: _Mutable_iterator_tag
+	{	// identifying tag for output iterators
+	};
+
+struct forward_iterator_tag
+	: input_iterator_tag, _Mutable_iterator_tag
+	{	// identifying tag for forward iterators
+	};
+
+struct bidirectional_iterator_tag
+	: forward_iterator_tag
+	{	// identifying tag for bidirectional iterators
+	};
+
+struct random_access_iterator_tag
+	: bidirectional_iterator_tag
+	{	// identifying tag for random-access iterators
+	};
+
+		// POINTER ITERATOR TAGS
+struct _Nonscalar_ptr_iterator_tag
+	{	// pointer to unknown type
+	};
+struct _Scalar_ptr_iterator_tag
+	{	// pointer to scalar type
+	};
+
+		// TEMPLATE CLASS iterator
+template<class _Category,
+	class _Ty,
+	class _Diff = ptrdiff_t,
+	class _Pointer = _Ty *,
+	class _Reference = _Ty&>
+	struct iterator
+	{	// base type for iterator classes
+	typedef _Category iterator_category;
+	typedef _Ty value_type;
+	typedef _Diff difference_type;
+
+	typedef _Pointer pointer;
+	typedef _Reference reference;
+	};
+
+template<class _Category,
+	class _Ty,
+	class _Diff,
+	class _Pointer,
+	class _Reference,
+	class _Base>
+	struct _Iterator012
+		: public _Base
+	{	// base type for debugging iterator classes
+	typedef _Category iterator_category;
+	typedef _Ty value_type;
+	typedef _Diff difference_type;
+
+	typedef _Pointer pointer;
+	typedef _Reference reference;
+	};
+
+// base for output iterators
+typedef iterator<output_iterator_tag, void, void, void, void> _Outit;
+
+		// TEMPLATE CLASS _Is_iterator
+template<class,
+	class = void>
+	struct _Is_iterator
+		: false_type
+	{	// default definition
+	};
+
+template<class _Ty>
+	struct _Is_iterator<_Ty, typename _Param_tester<
+		typename _Ty::iterator_category,
+		typename _Ty::value_type,
+		typename _Ty::difference_type,
+		typename _Ty::pointer,
+		typename _Ty::reference
+		>::type>
+		: true_type
+	{	// defined if _Ty::* types exist
+	};
+
+template<class _Ty>
+	struct _Is_iterator<_Ty *>
+		: true_type
+	{	// defined for pointers
+	};
+
+		// TEMPLATE CLASS iterator_traits
+template<class _Iter,
+	bool = _Is_iterator<_Iter>::value>
+	struct _Iterator_traits_base
+	{	// get traits from iterator _Iter
+	typedef typename _Iter::iterator_category iterator_category;
+	typedef typename _Iter::value_type value_type;
+	typedef typename _Iter::difference_type difference_type;
+
+	typedef typename _Iter::pointer pointer;
+	typedef typename _Iter::reference reference;
+	};
+
+template<class _Iter>
+	struct _Iterator_traits_base<_Iter, false>
+	{	// empty for non-iterators
+	};
+
+template<class _Iter>
+	struct iterator_traits
+		: _Iterator_traits_base<_Iter>
+	{	// get traits from iterator _Iter, if possible
+	};
+
+template<class _Ty>
+	struct iterator_traits<_Ty *>
+	{	// get traits from pointer
+	typedef random_access_iterator_tag iterator_category;
+	typedef _Ty value_type;
+	typedef ptrdiff_t difference_type;
+
+	typedef _Ty *pointer;
+	typedef _Ty& reference;
+	};
+
+template<class _Ty>
+	struct iterator_traits<const _Ty *>
+	{	// get traits from const pointer
+	typedef random_access_iterator_tag iterator_category;
+	typedef _Ty value_type;
+	typedef ptrdiff_t difference_type;
+
+	typedef const _Ty *pointer;
+	typedef const _Ty& reference;
+	};
+
+		// TEMPLATE FUNCTION _Iter_cat
+template<class _Iter> inline
+	typename iterator_traits<_Iter>::iterator_category
+		_Iter_cat(const _Iter&)
+	{	// return category from iterator argument
+	typename iterator_traits<_Iter>::iterator_category _Cat;
+	return (_Cat);
+	}
+
+		// TEMPLATE FUNCTION _Ptr_cat
+template<class _Iter1,
+	class _Iter2> inline
+	_Nonscalar_ptr_iterator_tag _Ptr_cat(_Iter1&, _Iter2&)
+	{	// return pointer category from arbitrary arguments
+	_Nonscalar_ptr_iterator_tag _Cat;
+	return (_Cat);
+	}
+
+template<class _Elem1,
+	class _Elem2>
+	struct _Ptr_cat_helper
+	{	// determines pointer category, nonscalar by default
+	typedef _Nonscalar_ptr_iterator_tag type;
+	};
+
+template<class _Elem>
+	struct _Ptr_cat_helper<_Elem, _Elem>
+	{	// determines pointer category, common type
+	typedef typename _If<is_scalar<_Elem>::value,
+		_Scalar_ptr_iterator_tag,
+		_Nonscalar_ptr_iterator_tag>::type type;
+	};
+
+template<class _Anything>
+	struct _Ptr_cat_helper<_Anything *, const _Anything *>
+	{	// determines pointer category
+	typedef _Scalar_ptr_iterator_tag type;
+	};
+
+template<class _Elem1,
+	class _Elem2> inline
+	typename _Ptr_cat_helper<_Elem1, _Elem2>::type
+		_Ptr_cat(_Elem1 *, _Elem2 *)
+	{	// return pointer category from pointers
+	typename _Ptr_cat_helper<_Elem1, _Elem2>::type _Cat;
+	return (_Cat);
+	}
+
+template<class _Elem1,
+	class _Elem2> inline
+	typename _Ptr_cat_helper<_Elem1, _Elem2>::type
+		_Ptr_cat(const _Elem1 *, _Elem2 *)
+	{	// return pointer category from pointers
+	typename _Ptr_cat_helper<_Elem1, _Elem2>::type _Cat;
+	return (_Cat);
+	}
+
+		// DEBUG TESTING MACROS
+
+ #if _ITERATOR_DEBUG_LEVEL < 2
+  #define _DEBUG_LT(x, y)	((x) < (y))
+  #define _DEBUG_LT_PRED(pred, x, y)	pred(x, y)
+  #define _DEBUG_ORDER_PRED(first, last, pred)
+  #define _DEBUG_POINTER(first)
+  #define _DEBUG_POINTER_IF(test, first)
+  #define _DEBUG_POINTER2(first, file, line)
+  #define _DEBUG_RANGE(first, last)
+  #define _DEBUG_RANGE2(first, last, file, line)
+  #define _DEBUG_RANGE_PTR(first, last, ptr)
+  #define _DEBUG_RANGE_PTR2(first, last, ptr, file, line)
+
+ #else /* _ITERATOR_DEBUG_LEVEL < 2 */
+
+  #define _FILENAME	__FILEW__
+
+  #ifndef _DEBUG_LT_IMPL
+   #define _DEBUG_LT_IMPL	_Debug_lt
+  #endif /* _DEBUG_LT_IMPL */
+
+  #define _DEBUG_LT(x, y) \
+	_DEBUG_LT_IMPL(x, y, _FILENAME, __LINE__)
+
+  #ifndef _DEBUG_LT_PRED_IMPL
+   #define _DEBUG_LT_PRED_IMPL	_Debug_lt_pred
+  #endif /* _DEBUG_LT_PRED_IMPL */
+
+  #define _DEBUG_LT_PRED(pred, x, y)	\
+	_DEBUG_LT_PRED_IMPL(pred, x, y, _FILENAME, __LINE__)
+
+  #ifndef _DEBUG_ORDER_IMPL
+   #define _DEBUG_ORDER_IMPL	_Debug_order
+  #endif /* _DEBUG_ORDER_IMPL */
+
+  #define _DEBUG_ORDER_PRED(first, last, pred)	\
+	_DEBUG_ORDER_IMPL(first, last, pred, _FILENAME, __LINE__)
+
+  #ifndef _DEBUG_POINTER_IMPL
+   #define _DEBUG_POINTER_IMPL	_Debug_pointer
+  #endif /* _DEBUG_POINTER_IMPL */
+
+  #define _DEBUG_POINTER(first)	\
+	_DEBUG_POINTER_IMPL(first, _FILENAME, __LINE__)
+  #define _DEBUG_POINTER2(first, file, line)	\
+	_DEBUG_POINTER_IMPL(first, file, line)
+
+  #ifndef _DEBUG_POINTER_IF_IMPL
+   #define _DEBUG_POINTER_IF_IMPL	_Debug_pointer_if
+  #endif /* _DEBUG_POINTER_IF_IMPL */
+
+  #define _DEBUG_POINTER_IF(test, first)	\
+	_DEBUG_POINTER_IF_IMPL(test, first, _FILENAME, __LINE__)
+
+  #ifndef _DEBUG_RANGE_IMPL
+   #define _DEBUG_RANGE_IMPL	_Debug_range
+  #endif /* _DEBUG_RANGE_IMPL */
+
+  #define _DEBUG_RANGE(first, last)	\
+	_DEBUG_RANGE_IMPL(first, last, _FILENAME, __LINE__)
+  #define _DEBUG_RANGE2(first, last, file, line)	\
+	_DEBUG_RANGE_IMPL(first, last, file, line)
+
+  #ifndef _DEBUG_RANGE_PTR_IMPL
+   #define _DEBUG_RANGE_PTR_IMPL	_Debug_range_ptr
+  #endif /* _DEBUG_RANGE_PTR_IMPL */
+
+  #define _DEBUG_RANGE_PTR(first, last, ptr)	\
+	_DEBUG_RANGE_PTR_IMPL(first, last, ptr, _FILENAME, __LINE__)
+  #define _DEBUG_RANGE_PTR2(first, last, ptr, file, line)	\
+	_DEBUG_RANGE_PTR_IMPL(first, last, ptr, file, line)
+
+		// TEMPLATE FUNCTION _Debug_lt_pred
+template<class _Pr,
+	class _Ty1,
+	class _Ty2> inline
+	_CONST_FUN bool _Debug_lt_pred(_Pr _Pred,
+		_Ty1&& _Left, _Ty2&& _Right,
+		_Dbfile_t _File, _Dbline_t _Line)
+	{	// test if _Pred(_Left, _Right) and _Pred is strict weak ordering
+	return (!_Pred(_Left, _Right)
+		? false
+		: _Pred(_Right, _Left)
+			? (_DEBUG_ERROR2("invalid comparator", _File, _Line), true)
+			: true);
+	}
+
+		// TEMPLATE FUNCTION _Debug_lt
+template<class _Ty1,
+	class _Ty2> inline
+	_CONST_FUN bool _Debug_lt(_Ty1&& _Left, _Ty2&& _Right,
+		_Dbfile_t _File, _Dbline_t _Line)
+	{	// test if _Left < _Right and operator< is strict weak ordering
+	return (_Debug_lt_pred(less<>(),
+		_STD forward<_Ty1>(_Left), _STD forward<_Ty2>(_Right), _File, _Line));
+	}
+
+		// TEMPLATE FUNCTION _Debug_pointer
+template<class _InIt> inline
+	void _Debug_pointer(_InIt&, _Dbfile_t, _Dbline_t)
+	{	// (don't) test non-pointer for non-singularity, arbitrary type
+	}
+
+template<class _Ty> inline
+	void _Debug_pointer(_Ty *_Ptr, _Dbfile_t _File, _Dbline_t _Line)
+	{	// test pointer for non-singularity, pointers
+	if (_Ptr == 0)
+		_DEBUG_ERROR2("invalid null pointer", _File, _Line);
+	}
+
+		// TEMPLATE FUNCTION _Debug_pointer_if
+template<class _InIt> inline
+	void _Debug_pointer_if(bool, _InIt&, _Dbfile_t, _Dbline_t)
+	{	// (don't) test non-pointer for non-singularity, arbitrary type
+	}
+
+template<class _Ty> inline
+	void _Debug_pointer_if(bool _Test, _Ty *_Ptr,
+		_Dbfile_t _File, _Dbline_t _Line)
+	{	// conditionally test pointer for non-singularity, pointers
+	if (_Test && _Ptr == 0)
+		_DEBUG_ERROR2("invalid null pointer", _File, _Line);
+	}
+
+		// TEMPLATE FUNCTION _Debug_range
+template<class _InIt> inline
+	void _Debug_range2(_InIt _First, _InIt _Last,
+		_Dbfile_t, _Dbline_t, input_iterator_tag)
+	{	// test iterator pair for valid range, arbitrary iterators
+	bool _Ans = _First == _Last;	// make sure they're comparable
+	_Ans = _Ans;	// to quiet diagnostics
+	}
+
+template<class _RanIt> inline
+	void _Debug_range2(_RanIt _First, _RanIt _Last,
+		_Dbfile_t _File, _Dbline_t _Line, random_access_iterator_tag)
+	{	// test iterator pair for valid range, random-access iterators
+	if (_First != _Last)
+		{	// check for non-null pointers, valid range
+		_DEBUG_POINTER2(_First, _File, _Line);
+		_DEBUG_POINTER2(_Last, _File, _Line);
+		if (_Last < _First)
+			_DEBUG_ERROR2("invalid iterator range", _File, _Line);
+		}
+	}
+
+template<class _InIt> inline
+	void _Debug_range(_InIt _First, _InIt _Last,
+		_Dbfile_t _File, _Dbline_t _Line)
+	{	// test iterator pair for valid range
+	_Debug_range2(_First, _Last, _File, _Line, _Iter_cat(_First));
+	}
+
+		// TEMPLATE FUNCTION _Debug_range_ptr
+template<class _InIt,
+	class _Pty> inline
+	void _Debug_range_ptr2(_InIt _First, _InIt _Last, _Pty& _Ptr,
+		_Dbfile_t _File, _Dbline_t _Line, input_iterator_tag)
+	{	// test iterator pair for valid range/pointer, arbitrary iterators
+	if (_First != _Last)
+		_DEBUG_POINTER2(_Ptr, _File, _Line);	// test only if used
+	}
+
+template<class _RanIt,
+	class _Pty> inline
+	void _Debug_range_ptr2(_RanIt _First, _RanIt _Last, _Pty& _Ptr,
+		_Dbfile_t _File, _Dbline_t _Line, random_access_iterator_tag)
+	{	// test iterator pair for valid range/pointer, random-access iterators
+	if (_First != _Last)
+		{	// check for non-null pointers, valid range
+		_DEBUG_POINTER2(_First, _File, _Line);
+		_DEBUG_POINTER2(_Last, _File, _Line);
+		if (_Last < _First)
+			_DEBUG_ERROR2("invalid iterator range", _File, _Line);
+		_DEBUG_POINTER2(_Ptr, _File, _Line);	// test only if used
+		}
+	}
+
+template<class _InIt,
+	class _Pty> inline
+	void _Debug_range_ptr(_InIt _First, _InIt _Last, _Pty& _Ptr,
+		_Dbfile_t _File, _Dbline_t _Line)
+	{	// test iterator pair for valid range/pointer
+	_Debug_range_ptr2(_First, _Last, _Ptr, _File, _Line, _Iter_cat(_First));
+	}
+
+		// TEMPLATE FUNCTION _Debug_order WITH PRED
+template<class _InIt,
+	class _Pr> inline
+	void _Debug_order2(_InIt, _InIt, _Pr,
+		_Dbfile_t, _Dbline_t, input_iterator_tag)
+	{	// test if range is ordered by predicate, input iterators
+	}
+
+template<class _FwdIt,
+	class _Pr> inline
+	void _Debug_order2(_FwdIt _First, _FwdIt _Last, _Pr _Pred,
+		_Dbfile_t _File, _Dbline_t _Line, forward_iterator_tag)
+	{	// test if range is ordered by predicate, forward iterators
+	for (_FwdIt _Next = _First; _First != _Last && ++_Next != _Last; ++_First)
+		if (_DEBUG_LT_PRED(_Pred, *_Next, *_First))
+			_DEBUG_ERROR2("sequence not ordered", _File, _Line);
+	}
+
+template<class _InIt,
+	class _Pr> inline
+	void _Debug_order(_InIt _First, _InIt _Last, _Pr _Pred,
+		_Dbfile_t _File, _Dbline_t _Line)
+	{	// test if range is ordered by predicate
+	_DEBUG_RANGE_PTR2(_First, _Last, _Pred, _File, _Line);
+	_Debug_order2(_First, _Last, _Pred, _File, _Line, _Iter_cat(_First));
+	}
+ #endif /* _ITERATOR_DEBUG_LEVEL < 2 */
+
+		// MORE ITERATOR STUFF (from <iterator>)
+		// TEMPLATE FUNCTION _Val_type
+
+template<class _Iter> inline
+	typename iterator_traits<_Iter>::value_type *_Val_type(_Iter)
+	{	// return value type from arbitrary argument
+	return (0);
+	}
+
+		// TEMPLATE FUNCTION advance
+template<class _InIt,
+	class _Diff> inline
+	void _Advance(_InIt& _Where, _Diff _Off, input_iterator_tag)
+	{	// increment iterator by offset, input iterators
+ #if _ITERATOR_DEBUG_LEVEL == 2
+	if (_Off < 0)
+		_DEBUG_ERROR("negative offset in advance");
+ #endif /* _ITERATOR_DEBUG_LEVEL == 2 */
+
+	for (; 0 < _Off; --_Off)
+		++_Where;
+	}
+
+template<class _FwdIt,
+	class _Diff> inline
+	void _Advance(_FwdIt& _Where, _Diff _Off, forward_iterator_tag)
+	{	// increment iterator by offset, forward iterators
+ #if _ITERATOR_DEBUG_LEVEL == 2
+	if (_Off < 0)
+		_DEBUG_ERROR("negative offset in advance");
+ #endif /* _ITERATOR_DEBUG_LEVEL == 2 */
+
+	for (; 0 < _Off; --_Off)
+		++_Where;
+	}
+
+template<class _BidIt,
+	class _Diff> inline
+	void _Advance(_BidIt& _Where, _Diff _Off, bidirectional_iterator_tag)
+	{	// increment iterator by offset, bidirectional iterators
+	for (; 0 < _Off; --_Off)
+		++_Where;
+	for (; _Off < 0; ++_Off)
+		--_Where;
+	}
+
+template<class _RanIt,
+	class _Diff> inline
+	void _Advance(_RanIt& _Where, _Diff _Off, random_access_iterator_tag)
+	{	// increment iterator by offset, random-access iterators
+	_Where += _Off;
+	}
+
+template<class _InIt,
+	class _Diff> inline
+	void advance(_InIt& _Where, _Diff _Off)
+	{	// increment iterator by offset, arbitrary iterators
+	_Advance(_Where, _Off, _Iter_cat(_Where));
+	}
+
+		// TEMPLATE FUNCTION _Dist_type
+
+template<class _Iter> inline
+	typename iterator_traits<_Iter>::difference_type
+		*_Dist_type(_Iter)
+	{	// return distance type from arbitrary argument
+	return (0);
+	}
+
+		// TEMPLATE FUNCTIONS distance and _Distance
+template<class _InIt,
+	class _Diff> inline
+		void _Distance2(_InIt _First, _InIt _Last, _Diff& _Off,
+			input_iterator_tag)
+	{	// add to _Off distance between input iterators
+	for (; _First != _Last; ++_First)
+		++_Off;
+	}
+
+template<class _FwdIt,
+	class _Diff> inline
+		void _Distance2(_FwdIt _First, _FwdIt _Last, _Diff& _Off,
+			forward_iterator_tag)
+	{	// add to _Off distance between forward iterators (redundant)
+	for (; _First != _Last; ++_First)
+		++_Off;
+	}
+
+template<class _BidIt,
+	class _Diff> inline
+		void _Distance2(_BidIt _First, _BidIt _Last, _Diff& _Off,
+			bidirectional_iterator_tag)
+	{	// add to _Off distance between bidirectional iterators (redundant)
+	for (; _First != _Last; ++_First)
+		++_Off;
+	}
+
+template<class _RanIt,
+	class _Diff> inline
+		void _Distance2(_RanIt _First, _RanIt _Last, _Diff& _Off,
+			random_access_iterator_tag)
+	{	// add to _Off distance between random-access iterators
+ #if _ITERATOR_DEBUG_LEVEL == 2
+	if (_First != _Last)
+		{	// check for null pointers
+		_DEBUG_POINTER(_First);
+		_DEBUG_POINTER(_Last);
+		}
+ #endif /* _ITERATOR_DEBUG_LEVEL == 2 */
+
+	_Off += _Last - _First;
+	}
+
+template<class _InIt> inline
+	typename iterator_traits<_InIt>::difference_type
+		distance(_InIt _First, _InIt _Last)
+	{	// return distance between iterators
+	typename iterator_traits<_InIt>::difference_type _Off = 0;
+	_Distance2(_First, _Last, _Off, _Iter_cat(_First));
+	return (_Off);
+	}
+
+template<class _InIt,
+	class _Diff> inline
+		void _Distance(_InIt _First, _InIt _Last, _Diff& _Off)
+	{	// add to _Off distance between iterators
+	_Distance2(_First
